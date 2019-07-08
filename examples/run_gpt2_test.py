@@ -25,6 +25,7 @@ def top_k_logits(logits, k):
         return logits
     else:
         values = torch.topk(logits, k)[0]
+        print(values)
         batch_mins = values[:, -1].view(-1, 1).expand_as(logits)
         return torch.where(logits < batch_mins, torch.ones_like(logits) * -1e10, logits)
 
@@ -41,8 +42,6 @@ def sample_sequence(model, length, start_token=None, batch_size=None, context=No
     with torch.no_grad():
         for i in trange(length):
             logits, past = model(prev, past=past)
-            print(logits)
-            print(past)
             logits = logits[:, -1, :] / temperature
             logits = top_k_logits(logits, k=top_k)
             log_probs = F.softmax(logits, dim=-1)
