@@ -31,7 +31,7 @@ def top_k_logits(logits, k):
         batch_mins = values[:, -1].view(-1, 1).expand_as(logits)
         return torch.where(logits < batch_mins, torch.ones_like(logits) * -1e10, logits)
 
-def get_token_prob(model, length, start_token=None, batch_size=None, context=None, temperature=1, top_k=0, device='cuda', sample=True, decoder=decoder):
+def get_token_prob(model, length, decoder, start_token=None, batch_size=None, context=None, temperature=1, top_k=0, device='cuda', sample=True):
     if start_token is None:
         assert context is not None, 'Specify exactly one of start_token and context!'
         context = torch.tensor(context, device=device, dtype=torch.long).unsqueeze(0).repeat(batch_size, 1)
@@ -109,11 +109,11 @@ def run_model():
     context_tokens = []
 
     get_token_prob(model=model, length=args.length,
+                decoder=enc
                 context=None,
                 start_token=enc.encoder['<|endoftext|>'],
                 batch_size=args.batch_size,
-                temperature=args.temperature, top_k=args.top_k, device=device,
-                decoder=enc
+                temperature=args.temperature, top_k=args.top_k, device=device,             
             )
 
 
