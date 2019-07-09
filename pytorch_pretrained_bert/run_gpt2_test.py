@@ -8,7 +8,8 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
-from pytorch_pretrained_bert import GPT2LMHeadModel, GPT2Tokenizer
+from pytorch_pretrained_bert import GPT2LMHeadModel
+from ...pytorch_pretrained_bert.tokenization_gpt2 import GPT2Tokenizer
 
 logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt = '%m/%d/%Y %H:%M:%S',
@@ -42,11 +43,11 @@ def get_token_prob(model, length, decoder, start_token=None, batch_size=None, co
         for i in trange(length):
             logits, past = model(prev, past=past)
             logits = logits[:, -1, :] / temperature
-            values, indexes = torch.topk(logits, k)
+            values, indexes = torch.topk(logits, top_k)
             print(values)
             print(indexes)
             for index in indexes:
-                print(decoder.decode(index.tolist(), clean_up_tokenization_spaces=False))
+                print(decoder.decode(index.tolist()))
 
             batch_mins = values[:, -1].view(-1, 1).expand_as(logits)
             logits =  torch.where(logits < batch_mins, torch.ones_like(logits) * -1e10, logits)
