@@ -25,9 +25,31 @@ def top_k_logits(logits, k):
         return logits
     else:
         values = torch.topk(logits, k)[0]
-        print(values)
+        for logit in torch.topk(logits, k)[1][0]:
+            print(logit.data[0])
+        print(F.softmax(values, dim=-1))
         batch_mins = values[:, -1].view(-1, 1).expand_as(logits)
         return torch.where(logits < batch_mins, torch.ones_like(logits) * -1e10, logits)
+
+def get_token_prob(model, length, start_token=None, batch_size=None, context=None, temperature=1, top_k=0, device='cuda', sample=True, decoder=decoder):
+    if start_token is None:
+        assert context is not None, 'Specify exactly one of start_token and context!'
+        context = torch.tensor(context, device=device, dtype=torch.long).unsqueeze(0).repeat(batch_size, 1)
+    else:
+        assert context is None, 'Specify exactly one of start_token and context!'
+        context = torch.full((batch_size, 1), start_token, device=device, dtype=torch.long)
+    prev = context
+    output = context
+    past = None
+    with torch.no_grad():
+        for i in trange(length):
+            logits, past = model(prev, past=past)
+            logits = logits[:, -1, :] / temperature
+            values, indexes = torch.topk(logits, k)
+            print(values)
+            print(indexes)
+            for index in indexes:
+                print(decoder.decode(index))
 
 def sample_sequence(model, length, start_token=None, batch_size=None, context=None, temperature=1, top_k=0, device='cuda', sample=True):
     if start_token is None:
@@ -85,6 +107,17 @@ def run_model():
         raise ValueError("Can't get samples longer than window size: %s" % model.config.n_ctx)
 
     context_tokens = []
+
+    get_token_prob(model=model, length=args.length,
+                context=None,
+                start_token=enc.encoder['<|endoftext|>'],
+                batch_size=args.batch_size,
+                temperature=args.temperature, top_k=args.top_k, device=device,
+                decoder=enc
+            )
+
+
+    '''    
     if not args.unconditional:
         raw_text = input("Model prompt >>> ")
         while not raw_text:
@@ -124,6 +157,7 @@ def run_model():
                 print("=" * 40 + " SAMPLE " + str(generated) + " " + "=" * 40)
                 print(text)
         print("=" * 80)
+    '''
 
 if __name__ == '__main__':
     run_model()
