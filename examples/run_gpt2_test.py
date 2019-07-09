@@ -25,9 +25,6 @@ def top_k_logits(logits, k):
         return logits
     else:
         values = torch.topk(logits, k)[0]
-        for logit in torch.topk(logits, k)[1][0]:
-            print(logit.data[0])
-        print(F.softmax(values, dim=-1))
         batch_mins = values[:, -1].view(-1, 1).expand_as(logits)
         return torch.where(logits < batch_mins, torch.ones_like(logits) * -1e10, logits)
 
@@ -49,7 +46,12 @@ def get_token_prob(model, length, decoder, start_token=None, batch_size=None, co
             print(values)
             print(indexes)
             for index in indexes:
-                print(decoder.decode(index))
+                print(decoder.decode(index.tolist(), clean_up_tokenization_spaces=False))
+
+            batch_mins = values[:, -1].view(-1, 1).expand_as(logits)
+            logits =  torch.where(logits < batch_mins, torch.ones_like(logits) * -1e10, logits)
+            log_probs = F.softmax(logits, dim=-1)
+            _, prev = torch.topk(log_probs, k=1, dim=-1)
 
 def sample_sequence(model, length, start_token=None, batch_size=None, context=None, temperature=1, top_k=0, device='cuda', sample=True):
     if start_token is None:
@@ -109,7 +111,7 @@ def run_model():
     context_tokens = []
 
     get_token_prob(model=model, length=args.length,
-                decoder=enc
+                decoder=enc,
                 context=None,
                 start_token=enc.encoder['<|endoftext|>'],
                 batch_size=args.batch_size,
