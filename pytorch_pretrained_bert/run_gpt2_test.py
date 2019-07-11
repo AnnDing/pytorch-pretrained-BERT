@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from pytorch_pretrained_bert import GPT2LMHeadModel
-from ...pytorch_pretrained_bert.tokenization_gpt2 import GPT2Tokenizer
+from tokenization_gpt2 import GPT2Tokenizer
 
 logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt = '%m/%d/%Y %H:%M:%S',
@@ -44,10 +44,17 @@ def get_token_prob(model, length, decoder, start_token=None, batch_size=None, co
             logits, past = model(prev, past=past)
             logits = logits[:, -1, :] / temperature
             values, indexes = torch.topk(logits, top_k)
-            print(values)
+
+            prob = F.softmax(values, dim=-1)
+            print(prob.tolist())
             print(indexes)
-            for index in indexes:
-                print(decoder.decode(index.tolist()))
+            topk_tokens = []
+            for index in indexes.tolist()[0]:
+                topk_tokens.append(decoder.decode([index]))
+            print(topk_tokens)
+            for p, token in zip(prob.tolist()[0], topk_tokens):
+                print(token, p)
+
 
             batch_mins = values[:, -1].view(-1, 1).expand_as(logits)
             logits =  torch.where(logits < batch_mins, torch.ones_like(logits) * -1e10, logits)
@@ -102,6 +109,7 @@ def run_model():
     enc = GPT2Tokenizer.from_pretrained(args.model_name_or_path)
     model = GPT2LMHeadModel.from_pretrained(args.model_name_or_path)
     model.to(device)
+    print(model.transformer.wte.data)
     model.eval()
 
     if args.length == -1:
@@ -110,6 +118,31 @@ def run_model():
         raise ValueError("Can't get samples longer than window size: %s" % model.config.n_ctx)
 
     context_tokens = []
+
+    raw_text = input("input >>> ")
+    context_tokens = enc.encode(raw_text.strip())
+    context = torch.tensor(context_tokens, device=device, dtype=torch.long).unsqueeze(0).repeat(args.batch_size, 1)
+    past = None
+
+    generated_text = raw_text.strip()
+    with torch.no_grad():
+        while True:
+            logits, past = model(context, past=past)
+            logits = logits[:, -1, :] / args.temperature
+            values, indexes = torch.topk(logits, args.top_k)
+            prob = F.softmax(values, dim=-1)
+
+            topk_tokens = []
+            for index in indexes.tolist()[0]:
+                topk_tokens.append(enc.decode([index]))
+
+            for index, token, p in zip(indexes.tolist()[0], topk_tokens, prob.tolist()[0]):
+                print('{} : {} , {}'.format(index, token, p))
+
+            # print(generated_text)
+
+            raw_text = input("input id>>> ")
+            context = torch.tensor([[int(raw_text)]], device=device, dtype=torch.long)
 
     get_token_prob(model=model, length=args.length,
                 decoder=enc,

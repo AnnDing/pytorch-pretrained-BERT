@@ -31,7 +31,7 @@ except ImportError:
     def lru_cache():
         return lambda func: func
 
-from .file_utils import cached_path
+from file_utils import cached_path
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ class GPT2Tokenizer(object):
             logger.info("loading vocabulary file {}".format(vocab_file))
             logger.info("loading merges file {}".format(merges_file))
         else:
-            logger.info("loading vocabulary file {} from cache at {}".format(
+            logger.info("now we start loading vocabulary file {} from cache at {}".format(
                 vocab_file, resolved_vocab_file))
             logger.info("loading merges file {} from cache at {}".format(
                 merges_file, resolved_merges_file))

@@ -46,7 +46,7 @@ setup(
     long_description_content_type="text/markdown",
     keywords='BERT NLP deep learning google',
     license='Apache',
-    url="https://github.com/huggingface/pytorch-pretrained-BERT",
+    url="https://github.com/AnnDing/pytorch-pretrained-BERT",
     packages=find_packages(exclude=["*.tests", "*.tests.*",
                                     "tests.*", "tests"]),
     install_requires=['torch>=0.4.1',
